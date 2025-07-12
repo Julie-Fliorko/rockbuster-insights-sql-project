@@ -1,0 +1,43 @@
+-- Create calendar of daily dates
+WITH calendar AS (
+  SELECT generate_series(
+    (SELECT MIN(rental_date) FROM rental),
+    (SELECT MAX(return_date) FROM rental),
+    interval '1 day'
+  )::date AS date
+),
+
+-- Build daily inventory status
+inventory_status AS (
+  SELECT 
+    i.inventory_id,
+    c.date,
+    CASE
+      WHEN r.rental_id IS NULL THEN 1                       -- never rented
+      WHEN c.date < r.rental_date THEN 1                   -- before rental
+      WHEN c.date > r.return_date THEN 1                   -- after return
+      ELSE 0                                               -- currently rented
+    END AS is_available
+  FROM inventory i
+  CROSS JOIN calendar c
+  LEFT JOIN rental r ON r.inventory_id = i.inventory_id
+),
+
+-- Aggregate inventory counts
+daily_inventory AS (
+  SELECT
+    date,
+    SUM(is_available) AS available_inventory,
+    COUNT(*) AS total_inventory
+  FROM inventory_status
+  GROUP BY date
+)
+
+-- Rented out 
+SELECT
+  date,
+  available_inventory,
+  total_inventory - available_inventory AS rented_inventory,
+  total_inventory
+FROM daily_inventory
+ORDER BY date;
