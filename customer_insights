@@ -1,0 +1,116 @@
+
+-- ========================
+-- SUBQUERY APPROACH
+-- ========================
+
+-- Step 1: Average amount paid by the top 5 customers
+
+SELECT AVG(total_amount_paid.total_spending)
+FROM (
+	SELECT customer.customer_id, customer.first_name, customer.last_name, SUM(payment.amount) AS total_spending
+	FROM customer
+	JOIN payment ON customer.customer_id = payment.customer_id
+	GROUP BY customer.customer_id
+	ORDER BY total_spending DESC
+	LIMIT 5
+) AS total_amount_paid;
+
+-- Step 2: Compare number of top 5 vs all customers by country
+
+SELECT customer_country.country, 
+       COUNT(DISTINCT customer_country.customer_id) AS all_customer_count, 
+       COUNT(DISTINCT top_5_customers.customer_id) AS top_customer_count
+FROM (
+	SELECT customer.customer_id, country.country
+	FROM customer
+	JOIN address ON customer.address_id = address.address_id
+	JOIN city ON address.city_id = city.city_id
+	JOIN country ON city.country_id = country.country_id
+) AS customer_country
+LEFT JOIN (
+	SELECT customer.customer_id, country.country
+	FROM customer
+	JOIN payment ON customer.customer_id = payment.customer_id
+	JOIN address ON customer.address_id = address.address_id
+	JOIN city ON address.city_id = city.city_id
+	JOIN country ON city.country_id = country.country_id
+	GROUP BY customer.customer_id, country.country
+	ORDER BY SUM(payment.amount) DESC
+	LIMIT 5
+) AS top_5_customers
+ON customer_country.customer_id = top_5_customers.customer_id
+GROUP BY customer_country.country;
+
+-- ========================
+-- CTE APPROACH
+-- ========================
+
+-- Step 1: Average amount paid by top 5 customers (CTE version)
+
+WITH total_amount_paid AS (
+	SELECT customer.customer_id, customer.first_name, customer.last_name, SUM(payment.amount) AS total_spending
+	FROM customer
+	JOIN payment ON customer.customer_id = payment.customer_id
+	GROUP BY customer.customer_id
+	ORDER BY total_spending DESC
+	LIMIT 5
+)
+SELECT AVG(total_spending)
+FROM total_amount_paid;
+
+-- Step 2: Top 5 vs All Customers by Country (CTE version)
+
+WITH customer_country AS (
+	SELECT customer.customer_id, country.country
+	FROM customer
+	JOIN address ON customer.address_id = address.address_id
+	JOIN city ON address.city_id = city.city_id
+	JOIN country ON city.country_id = country.country_id
+),
+top_5_customers AS (
+	SELECT customer.customer_id, country.country
+	FROM customer
+	JOIN payment ON customer.customer_id = payment.customer_id
+	JOIN address ON customer.address_id = address.address_id
+	JOIN city ON address.city_id = city.city_id
+	JOIN country ON city.country_id = country.country_id
+	GROUP BY customer.customer_id, country.country
+	ORDER BY SUM(payment.amount) DESC
+	LIMIT 5
+)
+SELECT customer_country.country,
+       COUNT(DISTINCT customer_country.customer_id) AS all_customer_count,
+       COUNT(DISTINCT top_5_customers.customer_id) AS top_customer_count
+FROM customer_country
+LEFT JOIN top_5_customers
+ON customer_country.customer_id = top_5_customers.customer_id
+GROUP BY customer_country.country;
+
+-- ========================
+-- Step 3: Query Plan Comparison
+-- ========================
+
+-- EXPLAIN (to compare cost estimate)
+EXPLAIN
+SELECT AVG(total_amount_paid.total_spending)
+FROM (
+	SELECT customer.customer_id, customer.first_name, customer.last_name, SUM(payment.amount) AS total_spending
+	FROM customer
+	JOIN payment ON customer.customer_id = payment.customer_id
+	GROUP BY customer.customer_id
+	ORDER BY total_spending DESC
+	LIMIT 5
+) AS total_amount_paid;
+
+-- EXPLAIN (CTE version)
+EXPLAIN
+WITH total_amount_paid AS (
+	SELECT customer.customer_id, customer.first_name, customer.last_name, SUM(payment.amount) AS total_spending
+	FROM customer
+	JOIN payment ON customer.customer_id = payment.customer_id
+	GROUP BY customer.customer_id
+	ORDER BY total_spending DESC
+	LIMIT 5
+)
+SELECT AVG(total_spending)
+FROM total_amount_paid;
