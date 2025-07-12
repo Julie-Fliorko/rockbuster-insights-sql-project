@@ -1,0 +1,112 @@
+-- ================================
+-- 1. FILM TABLE CLEANING
+-- ================================
+
+-- 🔍 Check for duplicate records
+WITH duplicate_cte AS (
+    SELECT *,
+           ROW_NUMBER() OVER (
+               PARTITION BY title, description, release_year, language_id, rental_duration,
+                            rental_rate, length, replacement_cost, rating
+               ORDER BY film_id
+           ) AS row_num
+    FROM film
+)
+SELECT * FROM duplicate_cte
+WHERE row_num > 1;
+
+-- Observation: No duplicate records were found.
+
+-- 🔍 Check for null values
+SELECT *
+FROM film
+WHERE title IS NULL
+   OR description IS NULL
+   OR release_year IS NULL
+   OR language_id IS NULL
+   OR rental_duration IS NULL
+   OR rental_rate IS NULL
+   OR length IS NULL
+   OR replacement_cost IS NULL
+   OR rating IS NULL;
+
+-- Observation: No null values were found.
+
+-- 🔍 Check title capitalization consistency
+SELECT title
+FROM film
+WHERE title !~ '^[A-Z]';
+
+-- 🔍 Check description duplicates
+SELECT description, COUNT(*)
+FROM film
+GROUP BY description
+HAVING COUNT(*) > 1;
+
+-- 🔍 Check if release years are consistent
+SELECT DISTINCT release_year FROM film;
+
+-- 🔍 Check if all films use the same language_id
+SELECT DISTINCT language_id FROM film;
+
+-- 🔍 Check rating values
+SELECT DISTINCT rating FROM film;
+
+-- Conclusion: Film table is clean. No nulls or duplicates. Consistent values.
+
+-- ================================
+-- 2. CUSTOMER TABLE CLEANING
+-- ================================
+
+-- 🔍 Check for complete duplicates
+WITH customer_duplicates AS (
+    SELECT *,
+           ROW_NUMBER() OVER (
+               PARTITION BY first_name, last_name, email, address_id, store_id, create_date
+               ORDER BY customer_id
+           ) AS row_num
+    FROM customer
+)
+SELECT * FROM customer_duplicates
+WHERE row_num > 1;
+
+-- No complete duplicates found
+
+-- 🔍 Check for null values
+SELECT *
+FROM customer
+WHERE first_name IS NULL
+   OR last_name IS NULL
+   OR email IS NULL
+   OR address_id IS NULL
+   OR store_id IS NULL;
+
+-- No null values found
+
+-- 🔍 Check for duplicate emails
+SELECT email, COUNT(*)
+FROM customer
+GROUP BY email
+HAVING COUNT(*) > 1;
+
+-- All emails are unique
+
+-- 🔍 Check email formatting
+SELECT email
+FROM customer
+WHERE email !~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$';
+
+-- 🔍 Check name capitalization
+SELECT first_name FROM customer WHERE first_name !~ '^[A-Z]';
+SELECT last_name FROM customer WHERE last_name !~ '^[A-Z]';
+
+-- ================================
+-- 3. IF THERE WERE NULLS (REFLECTION)
+-- ================================
+
+-- Suggestions:
+-- - Numeric fields: use AVG to fill nulls
+-- - Foreign keys: leave empty or impute based on context
+-- - Text fields: leave null or flag for manual review
+-- - Email/name: critical fields, should not be null. Flag errors if found.
+
