@@ -18,7 +18,7 @@ Rockbuster Stealth LLC is a movie rental company seeking to compete with Netflix
 | `sql/customer_insights.sql` | Found top customers, high-spending locations, and customer base by country. |
 | `sql/inventory_trends.sql` | Assessed inventory usage, availability, and rental trends by month. |
 | `reports/rockbuster-presentation.pdf` | Visual PDF summary of findings and business recommendations. |
-| `reports/sql-cleaning-summary.pdf` | Summary of data quality checks. |
+| `reports/sql-cleaning-summary.pdf` | Findings and summary. |
 | 
 ---
 
